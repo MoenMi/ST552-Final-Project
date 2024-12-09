@@ -9,21 +9,23 @@ output:
     number_sections: true
   df_print: paged
 ---
+
 \fontsize{11}{16.5}
 \selectfont
 
 ```{r, echo=FALSE}
 # Import Data
 data <- read.csv("merged-data/aqi_demographic.csv")
+
+# Adjust to fit percentage format of other predictors
+data$Adult.Smoking.Percentage = data$Adult.Smoking.Percentage / 100
 ```
 
 \newpage
 
 \section{Abstract}
 
-This report investigates the relationship between air quality and mortality rates across U.S. counties, with a focus on chronic respiratory and cardiovascular diseases. Using data from the Institute for Health Metrics and Evaluation (IHME) and the Environmental Protection Agency (EPA), multiple linear regression models were constructed to examine the effects of ground-level ozone and fine particulate matter (PM2.5) on mortality outcomes. Initial models show significant but weak associations between air quality indicators and mortality rates, suggesting potential confounding factors. Incorporating demographic variables such as smoking rates, poverty levels, and median household income significantly improved model performance, as evidenced by increases in adjusted $R^2$. Results indicate that demographic factors play a larger role in explaining mortality rate variations than air quality data alone, though ground-level ozone remains a significant predictor for cardiovascular disease mortality.
-
-\newpage
+This report investigates the relationship between air quality and mortality rates across U.S. counties, with a focus on chronic respiratory and cardiovascular diseases. Using data from the Institute for Health Metrics and Evaluation (IHME) and the Environmental Protection Agency (EPA), multiple linear regression models were constructed to examine the effects of ground-level ozone ($\text{O}_3$) and fine particulate matter ($\text{PM}_{2.5}$) on mortality outcomes. Initial models show significant but weak associations between air quality indicators and mortality rates, suggesting potential confounding factors. Incorporating demographic variables such as smoking rates, poverty levels, and median household income significantly improved model performance, as evidenced by increases in adjusted $R^2$. Results indicate that demographic factors play a larger role in explaining mortality rate variations than air quality data alone, though $\text{O}_3$ remains a significant predictor for cardiovascular disease mortality.
 
 \section{Background}
 
@@ -31,13 +33,19 @@ Ground-level ozone and fine particulate matter are two of the most significant a
 
 \subsection{Data Sources}
 
-The data used in this analysis was collected from two main sources. The mortality data comes from the Institute for Health Metrics and Evaluation (IHME) and contains data for various mortality factors, with the most recent data being from 2014. Since this data is derived from death registration data, it is not missing data for any counties.
+The data used in this analysis was collected from two main sources. The mortality data comes from the Institute for Health Metrics and Evaluation (IHME) and contains data for various mortality factors, with the most recent data being from 2014. Since this data is derived from death registration data, it contains complete data for every county in the United States (IHME, 2016).
 
-The air quality data in this analysis was published by the Environment Protection Agency (EPA) and covers the presence of various pollutants recorded in the United States by county in 2023. Since this methodology only allows the EPA to monitor the pollutants in counties with the appropriate facilities to record such data, it is much more sparse. Only about one-third of counties have any recorded data, and the counties that do have recorded data typically only monitor select pollutants. However, the two pollutants that have the most significant impact on public health, ground-level ozone and fine particulate matter, are the most widely recorded pollutants. Because of this, these pollutants are the focus of this analysis.
+The air quality data in this analysis was published by the Environment Protection Agency (EPA) and covers the presence of various pollutants recorded in the United States by county in 2023. Since this methodology only allows the EPA to monitor the pollutants in counties with the appropriate facilities to record such data, it is much more sparse. Only about one-third of counties have any recorded data, and the counties that do have recorded data typically only monitor select pollutants. However, the two pollutants that have the most significant impact on public health, ground-level ozone and fine particulate matter, are the most widely recorded pollutants. Because of this, these pollutants are the focus of this analysis (EPA, 2024).
+
+A variety of other demographic and health-related factors are analyzed in later sections of this report. This data comes from an online Kaggle data set, which contains county-level data as of 2019. This data comes from a variety of public sources, including the U.S. Census Bureau, Bureau of Labor Statistics, and the Center for Disease Control. This data contains no missing values to consider (He, 2023).
 
 \subsection{Ground-Level Ozone}
 
-Ground-level ozone is a pollutant that has been shown to have negative effects on the health of individuals, particularly those with respiratory issues such as asthma.
+Ground-level ozone ($\text{O}_3$) is a pollutant that has been shown to have negative effects on the health of individuals, particularly those with respiratory issues such as asthma.
+
+The histogram shows the severity of the $\text{O}_3$ recorded by the EPA in 2023 for each county. Note that the EPA only recorded this data in 761 of the 3143 counties and county-equivalents (parishes in Louisiana, boroughs in Alaska, etc.) in the United States.
+
+One common way to measure the air quality in an area is the fourth daily maximum 8-hour concentration. This figure is calculated by first considering hourly measurements of the pollutant at the measurement sites. Then, the 8-hour period with the highest average concentration of ozone is calculated to find the daily maximum 8-hour ozone concentration. At the end of the year, every daily maximum 8-hour ozone concentration is ranked, and the fourth-highest value is considered for the yearly rating in order to limit the effect of outliers that are not indicative of long-term environmental effects. The EPA's National Ambient Air Quality Standards (NAAQS) uses this metric and sets the threshold for the ground-level ozone at 0.07 parts per million (ppm), which is represented by the vertical line in the histogram. The high number of counties above this threshold show that this pollutant has an unhealthy presence in many places in the United States.
 
 ```{r, echo=FALSE, results=FALSE}
 categories <- unique(data$Category)
@@ -60,7 +68,7 @@ length(ozone_by_county)
 summary(ozone_by_county)
 ```
 
-```{r, echo=FALSE, fig.height=4}
+```{r, echo=FALSE}
 hist(ozone_by_county,
      main = "Ground-Level Ozone by U.S. County",
      #main = NULL,
@@ -69,13 +77,13 @@ hist(ozone_by_county,
 abline(v = 0.07, col = "black", lwd = 4, lty = 2)
 ```
 
-The histogram shows the severity of the ground-level ozone recorded by the EPA in 2023 for each county. Note that the EPA only recorded this data in 761 of the 3143 counties and county-equivalents (parishes in Louisiana, boroughs in Alaska, etc.) in the United States.
-
-The EPA's National Ambient Air Quality Standards (NAAQS) sets the threshold for the ground-level ozone at 0.07 parts per million (ppm), which is represented by the vertical line in the histogram. The high number of counties above this threshold show that this pollutant has an unhealthy presence in many places in the United States.
-
 \subsection{Fine Particulate Matter}
 
-Fine particulate matter (PM2.5) refers to particles with a diameter of 2.5 micrometers or smaller. These fine particles can be made up of anything, with some of the notable sources of PM2.5 including vehicle emissions, industrial activity, and wildfires. Like ground-level ozone, fine particulate matter has been shown to have negative impact on health, particularly among those with pre-existing respiratory issues.
+Fine particulate matter ($\text{PM}_{2.5}$) refers to particles with a diameter of 2.5 micrometers or smaller. These fine particles can be made up of anything, with some of the notable sources of $\text{PM}_{2.5}$ including vehicle emissions, industrial activity, and wildfires. $\text{PM}_{2.5}$ is small enough to penetrate deep into the lungs and into the bloodstream, posing a serious health concern, particularly among those with pre-existing respiratory issues.
+
+The histogram shows the severity of the $\text{PM}_{2.5}$ recorded by the EPA in 2023 for each county. Note that the EPA only recorded this data in 559 of the 3143 counties and county-equivalents.
+
+The $\text{PM}_{2.5}$ weighted annual mean concentration considers the population density near various reporting sites to more accurately reflect the conditions experienced by the population. The NAAQS sets the threshold for $\text{PM}_{2.5}$ weighted annual mean concentration at 9.0 $\mu g/m^3$ (micrometers per cubic meter of air), which is represented by the vertical line in the histogram. The high number of counties above this threshold show that this pollutant has an unhealthy presence in many places in the United States.
 
 ```{r, warning=FALSE, echo=FALSE, results=FALSE}
 fpm_by_county <- as.numeric(respiratory_data$PM2.5.Wtd.AM..mu.g.m3)
@@ -91,24 +99,20 @@ summary(fpm_by_county)
 hist(fpm_by_county,
      main = "Fine Particulate Matter by U.S. County",
      #main = NULL,
-     xlab = "PM2.5 Weighted Annual Mean Concentration (mu g/m^3)",
+     xlab = expression("PM"[2.5] ~ "Weighted Annual Mean Concentration (" * mu * "g/m"^3 * ")"),
      ylab = "Number of Counties")
 abline(v = 9, col = "black", lwd = 4, lty = 2)
 ```
 
-The histogram shows the severity of the PM2.5 recorded by the EPA in 2023 for each county. Note that the EPA only recorded this data in 562 of the 3143 counties and county-equivalents (parishes in Louisiana, boroughs in Alaska, etc.) in the United States.
-
-The NAAQS sets the threshold for the fine particulate matter at 9.0 $\mu g/m^3$, which is represented by the vertical line in the histogram. The high number of counties above this threshold show that this pollutant has an unhealthy presence in many places in the United States.
-
 \subsection{Data Preparation}
 
-The two datasets used in this analysis were found online as CSV and XLSX files. These file were downloaded and joined using Python's pandas library using the the county FIPS codes (see Appendix A for details). This merged dataset was then imported into R for analysis.
+The three data sets used in this analysis were found online as CSV and XLSX files. These file were downloaded and joined using Python's pandas library using the the county FIPS codes (see Appendix A for details). This merged data set was then imported into R for analysis.
 
-Since the air quality data does not cover every U.S. county, only the cases that contain data for both ground-level ozone and PM2.5 are used in this analysis.
+Since the air quality data does not cover every U.S. county, only the cases that contain data for both $\text{O}_3$ and $\text{PM}_{2.5}$ are used in this analysis. A total of 444 U.S. counties contain data for both pollutants, making this the total number of observations considered in this analysis.
 
 \section{Predicting Mortality Outcomes from Air Quality Data}
 
-Air quality is a critical determinant of public health, with pollutants such as ground-level ozone and PM2.5 linked to various health outcomes. This section leverages county-level air quality and mortality data to investigate the relationship between these environmental factors and mortality outcomes across different causes of death. Using multiple linear regression, we explore the predictive power of the air quality indicators for mortality rates, focusing on chronic respiratory diseases and cardiovascular diseases.
+Air quality is a critical determinant of public health, with pollutants such as $\text{O}_3$ and $\text{PM}_{2.5}$ linked to various health outcomes. This section leverages county-level air quality and mortality data to investigate the relationship between these environmental factors and mortality outcomes across different causes of death. Using multiple linear regression, we explore the predictive power of the air quality indicators for mortality rates, focusing on chronic respiratory diseases and cardiovascular diseases.
 
 The models presented in this section evaluate both the statistical significance and practical implications of the relationships between air quality indicators and mortality outcomes. By analyzing the coefficients, $R^2_{\text{adj}}$ values, and $p$-values, we assess the strength and direction of these associations. Furthermore, the findings highlight potential confounding variables and areas for further investigation.
 
@@ -116,27 +120,27 @@ Subsections below discuss findings for chronic respiratory disease mortality and
 
 \subsection{Chronic Respiratory Disease Factors}
 
-The first question that we seek to answer in this analysis is how well county-level air quality indicators can predict the county-level mortality rates due to chronic respiratory disease. To answer this question, we create a multiple linear regression model with the mortality rate due to cardiovascular factors as the target and ground-level ozone and PM2.5 as the predictors. The full summary of this model can be found in Appendix B.
+The first question that we seek to answer in this analysis is how well county-level air quality indicators can predict the county-level mortality rates due to chronic respiratory disease. To answer this question, we create a multiple linear regression model with the mortality rate due to cardiovascular factors as the target and $\text{O}_3$ and $\text{PM}_{2.5}$ as the predictors. The full summary of this model can be found in Appendix B.
 
 The low $p$-value on this model's $F$-statistic shows that there is a statistically significant relationship between the air quality indicators and the mortality rate due to chronic respiratory diseases. However, the low $R^2_{\text{adj}}$ value of 0.01358 indicates that the predictors are a poor fit, explaining very little of the variation in the mortality rates.
 
-The most suspicious aspect of this model's summary is the negative coefficient associated with the ground-level ozone. This relationship is counterintuitive, since an increase in the pollutant is expected to worsen health outcomes. However, this model predicts that the presence of the pollutant lowers the mortality rate in a county. This indicates that there may be issues with confounding variables.
+The most suspicious aspect of this model's summary is the negative coefficient associated with the $\text{O}_3$. This relationship is counter-intuitive, since an increase in the pollutant is expected to worsen health outcomes. However, this model predicts that the presence of the pollutant lowers the mortality rate in a county. This indicates that there may be issues with confounding variables.
 
 \subsection{Cardiovascular Disease Factors}
 
-Air quality has been shown to have an impact on cardiovascular health. This section examines this relationship by creating a multiple linear regression model that uses ground-level ozone and PM2.5 to predict mortality due to cardiovascular disease (CVD). The full summary of this model is available in Appendix C.
+Air quality has been shown to have an impact on cardiovascular health. This section examines this relationship by creating a multiple linear regression model that uses $\text{O}_3$ and $\text{PM}_{2.5}$ to predict mortality due to cardiovascular disease (CVD). The full summary of this model is available in Appendix C.
 
-This model's very low $p$-value for the $F$-statistic indicates that there is a statistically significant relationship between the air quality and mortality due to CVD. The $R^2_{\text{adj}}$ value of 0.05078 indicates that the ground-level ozone and PM2.5 predict the mortality rate due to CVD more accurately than the mortality rate to chronic respiratory disease.
+This model's very low $p$-value for the $F$-statistic indicates that there is a statistically significant relationship between the air quality and mortality due to CVD. The $R^2_{\text{adj}}$ value of 0.05078 indicates that the $\text{O}_3$ and $\text{PM}_{2.5}$ predict the mortality rate due to CVD more accurately than the mortality rate to chronic respiratory disease.
 
 \section{Predicting Mortality Outcomes with Air Quality and Demographic Data}
 
 Some suspicious outcomes in the previous section suggest that there are confounding factors influencing the mortality rates investigated. This section aims to examine this issue by using demographic data, including poverty, unemployment, median household income, and percentage of adult smokers, alongside the air quality data to further examine the relationship. Including these predictors provides a more complete understanding of the factors influencing mortality rates. As a result, we can improve the predictive power of our model and understand the relative importance of air quality as a predictor for the observed mortality categories.
 
-The following sections once again examine the mortality rate due to chronic respiratory disease and CVD using multiple linear regression. Each of the models below is initially created using ground-level ozone, PM2.5, percentage of adults who smoke, percent of the area in the county that is developed, median household income, poverty rate, unemployment rate, and uninsured rate as predictors. Then, variable selection is performed using backward elimination with BIC is performed to address issues with multicollinearity, since much of the demographic data is highly correlated. These resulting models are what are analyzed in the subsections below.
+The following sections once again examine the mortality rate due to chronic respiratory disease and CVD using multiple linear regression. Each of the models below is initially created using $\text{O}_3$, $\text{PM}_{2.5}$, percentage of adults who smoke, percent of the area in the county that is developed, median household income, poverty rate, unemployment rate, and uninsured rate as predictors. Then, variable selection is performed using backward elimination with BIC is performed to address issues with multicollinearity, since much of the demographic data is highly correlated. These resulting models are what are analyzed in the subsections below. For a further exploration of the initial predictors included in these models, see Appendix D.
 
 \subsection{Chronic Respiratory Disease Factors}
 
-The variable selection process for predicting mortality due to chronic respiratory disease reduces the model from the eight initial predictors to the following three: percentage of adults who smoke, percentage of area that is developed, and median household income. Notably, both of the air quality indicators included in the initial model are dropped in the variable selection. This suggests that both the ground-level ozone and PM2.5 observations at the county level have little effect on mortality due to chronic respiratory disease. See Appendix D for the full model summary.
+The variable selection process for predicting mortality due to chronic respiratory disease reduces the model from the eight initial predictors to the following three: percentage of adults who smoke, percentage of area that is developed, and median household income. Notably, both of the air quality indicators included in the initial model are dropped in the variable selection. This suggests that both the $\text{O}_3$ and $\text{PM}_{2.5}$ observations at the county level have little effect on mortality due to chronic respiratory disease. See Appendix E for the full model summary.
 
 The regression model using these three predictors has an $R^2_{\text{adj}}$ value of 0.5036, indicating that the model accounts for 50.36% of the variation in the results. This is significantly higher than the $R^2_{\text{adj}}$ of the model that only considers the air quality metrics, which has an $R^2_{\text{adj}}$ value of 0.01358, further indicating that the mortality rate is better explained by the demographic factors than the air quality data.
 
@@ -144,25 +148,35 @@ The three predictors in this model have low $p$-values, indicating that they are
 
 \subsection{Cardiovascular Disease Factors}
 
-The variable selection process for predicting mortality due to CVD reduces the model from the eight initial predictors to the following three: percentage of adults who smoke, poverty rate, and ground-level ozone. Notably, the ground-level ozone predictor is retained in this variable selection. This suggests that both the ground-level ozone observations at the county level have have a noticeable effect on mortality due to CVD. See Appendix E for the full model summary.
+The variable selection process for predicting mortality due to CVD reduces the model from the eight initial predictors to the following three: percentage of adults who smoke, poverty rate, and ground-level ozone. Notably, the $\text{O}_3$ predictor is retained in this variable selection. This suggests that both the ground-level ozone observations at the county level have have a noticeable effect on mortality due to CVD. See Appendix F for the full model summary.
 
 The regression model using these three predictors has an $R^2_{\text{adj}}$ value of 0.5616, indicating that the model accounts for 56.16% of the variation in the results. This is significantly higher than the $R^2_{\text{adj}}$ of the model that only considers the air quality metrics, which has an $R^2_{\text{adj}}$ value of 0.05078, further indicating that the mortality rate is better explained by the demographic factors than the air quality data.
 
-The three predictors in this model have extremely low $p$-values, indicating that they are each statistically significant in predicting the mortality rate due to chronic respiratory disease. The coefficients of the predictors indicate that higher rates of smoking, poverty, and ground-level ozone all increase this mortality rate.
+The three predictors in this model have extremely low $p$-values, indicating that they are each statistically significant in predicting the mortality rate due to chronic respiratory disease. The coefficients of the predictors indicate that higher rates of smoking, poverty, and $\text{O}_3$ all increase this mortality rate.
 
 \section{Conclusion}
 
-This analysis highlights the limited predictive power of air quality indicators alone in explaining variations in mortality rates at the county level. While ground-level ozone and PM2.5 exhibit statistically significant relationships with mortality outcomes, their contribution is overshadowed by demographic factors such as smoking prevalence, poverty, and median household income. Models incorporating these demographic predictors showed substantial improvements in explanatory power, with adjusted $R^2$ values exceeding 0.5 for both chronic respiratory and cardiovascular disease mortality rates.
+This analysis shows that while $\text{O}_3$ and $\text{PM}_{2.5}$ exhibit statistically significant relationships with mortality outcomes, their contribution is overshadowed by demographic factors such as smoking prevalence, poverty, and median household income. Models incorporating these demographic predictors showed substantial improvements in explanatory power, with adjusted $R^2$ values exceeding 0.5 for both chronic respiratory and cardiovascular disease mortality rates. Therefore, we conclude that while $\text{O}_3$ and $\text{PM}_{2.5}$ have a statistically significant effect on mortality outcomes, they are not very useful in constructing a model to predict such outcomes.
 
-Interestingly, ground-level ozone emerged as a significant predictor in the cardiovascular disease model, even after accounting for demographic variables, reinforcing its role as a critical air pollutant affecting public health. The absence of PM2.5 as a retained predictor in any of the final models suggests that its impact may be confounded by other variables at the county level or less direct.
+Interestingly, $\text{O}_3$ emerged as a significant predictor in the CVD model, even after accounting for demographic variables, reinforcing its role as a critical air pollutant affecting public health. The absence of $\text{PM}_{2.5}$ as a retained predictor in any of the final models suggests that its impact may be confounded by other variables at the county level or less direct.
+
+Major limitations in the approach used in this analysis arise from the limitations in the data. While the historical air quality data would provide deeper insights into the long-term affects of air quality on mortality, such data was not readily available. In addition to improving our understanding of the link between air quality and mortality, such data would allow for the construction of models to identify areas that will be impacted by such effects in the future. That being said, the results of the latter models indicate that other demographic and health-related factors do a much better job of predicting these outcomes and are easier to collect for all counties than air quality metrics, which require specific monitoring stations.
+
+\newpage
+
+\section{References}
+
+1.  EPA. (2024). *Air Quality Statistics by County, 2023*. Retrieved from <https://www.epa.gov/air-trends/air-quality-cities-and-counties> on 2024-12-09.
+2.  He, Lawrence. (2023). *United States County Level Health Data*. Retrieved from <https://www.kaggle.com/datasets/lawrencehe/county-level-health-data?resource=download> on 2024-12-09.
+3.  IHME. (2016). *US county-level mortality*. Kaggle. Retrieved from <https://www.kaggle.com/datasets/IHME/us-countylevel-mortality/data> on 2024-12-09.
 
 \newpage
 
 \section{Appendices}
 
-\subsection{Appendix A: Merging Datasets with Python}
+\subsection{Appendix A: Merging Data Sets with Python}
 
-The two datasets used in this analysis were joined using Python's pandas library. Note that some columns were dropped and renamed for ease of use, but this was omitted from this code block for brevity.
+The three data sets used in this analysis were joined using Python's pandas library. Note that some columns were dropped and renamed for ease of use, but this was omitted from this code block for brevity.
 
 ```{python, eval = FALSE, python.reticulate=FALSE}
 import pandas as pd
@@ -179,19 +193,24 @@ aqi_df = pd.read_excel('ctyfactbook2023.xlsx',
 aqi_df = aqi_df.dropna(subset=['County FIPS Code'])
 aqi_df['County FIPS Code'] = aqi_df['County FIPS Code'].astype(int)
 
-# Join datasets on FIPS codes
+# Read demographic data
+demographic_df = pd.read_csv('raw_data.csv')
+
+# Join data sets on FIPS codes
 merged_df = pd.merge(mortality_df, aqi_df,
                      left_on='FIPS', right_on='County FIPS Code', how='inner')
+merged_df2 = pd.merge(trimmed_df, demographic_df,
+                      left_on='FIPS', right_on='FIPS', how='inner')
 
 # Export merged dataframe to CSV
-merged_df.to_csv('air_quality_mortality.csv', index=False)
+merged_df2.to_csv('air_demographic.csv', index=False)
 ```
 
 \newpage
 
 \subsection{Appendix B: Chronic Respiratory Disease Mortality Model Summary}
 
-The first model examined in this analysis uses the ground-level ozone and PM2.5 measurements to predict the mortality rates due to chronic respiratory disease. This simple multiple linear regression model is described by the summary below:
+The first model examined in this analysis uses the ground-level ozone and $\text{PM}_{2.5}$ measurements to predict the mortality rates due to chronic respiratory disease. This simple multiple linear regression model is described by the summary below:
 
 ```{r, echo=FALSE}
 # Filter rows with missing values
@@ -208,11 +227,19 @@ resp_model <- lm(Mortality.Rate..2014. ~ O3.8.hr..ppm. + PM2.5.Wtd.AM..mu.g.m3.,
 summary(resp_model)
 ```
 
+The diagnostic plots suggest that the linearity assumptions hold, and that there are no significant outliers or heavy tails affecting the model. Due to this, there are no issues with goodness-of-fit in the model.
+
+```{r, echo=FALSE}
+par(mfrow=c(2,2))
+plot(resp_model)
+par(mfrow=c(1,1))
+```
+
 \newpage
 
 \subsection{Appendix C: CVD Mortality Model Summary}
 
-The second model examined in this analysis uses the ground-level ozone and PM2.5 measurements to predict the mortality rates due to CVD. This simple multiple linear regression model is described by the summary below:
+The second model examined in this analysis uses the $\text{O}_3$ and $\text{PM}_{2.5}$ measurements to predict the mortality rates due to CVD. This simple multiple linear regression model is described by the summary below:
 
 ```{r, echo=FALSE}
 cvd_data <- data_by_category[["Cardiovascular diseases"]]
@@ -229,9 +256,63 @@ cvd_model <- lm(Mortality.Rate..2014. ~ O3.8.hr..ppm. + PM2.5.Wtd.AM..mu.g.m3.,
 summary(cvd_model)
 ```
 
+The diagnostic plots suggest that the linearity assumptions hold, and that there are no significant outliers or heavy tails affecting the model. Due to this, there are no issues with goodness-of-fit in the model.
+
+```{r, echo=FALSE}
+par(mfrow=c(2,2))
+plot(cvd_model)
+par(mfrow=c(1,1))
+```
+
 \newpage
 
-\subsection{Appendix D: Chronic Respiratory Disease Demographic Model Summary}
+\subsection{Appendix D: Demographic and Health Features}
+
+The following histograms show the distributions of the predictors considered in the expanded models of this analysis. Most of these distributions are right-skewed.
+
+```{r echo=FALSE, fig.height=7}
+par(mfrow = c(3, 2))
+hist(filtered_resp_data$Adult.Smoking.Percentage, main = "Adult Smoking Percentage", xlab=NULL)
+hist(filtered_resp_data$Median.Household.Income, main = "Median Household Income", xlab=NULL)
+hist(filtered_resp_data$Percent.Poverty, main = "Poverty Rate", xlab=NULL)
+hist(filtered_resp_data$Percent.Uninsured, main = "Uninsured Rate", xlab=NULL)
+hist(filtered_resp_data$Percent.Area.Developed, main = "Percent Area Developed", xlab=NULL)
+hist(filtered_resp_data$Percent.Unemployed, main = "Unemployment Rate", xlab=NULL)
+par(mfrow = c(1, 1))  # Reset plot layout
+```
+
+The following heat map shows the correlation between the predictors included in the initial expanded models.
+
+```{r, echo=FALSE}
+library(ggplot2)
+library(reshape2)
+
+# Calculate correlation matrix
+cor_matrix <- cor(filtered_resp_data[, c("O3.8.hr..ppm.", "PM2.5.Wtd.AM..mu.g.m3.", "Adult.Smoking.Percentage", "Median.Household.Income", "Percent.Poverty", "Percent.Uninsured", "Percent.Area.Developed", "Percent.Unemployed")])
+
+# Melt the correlation matrix for ggplot2
+melted_cor_matrix <- melt(cor_matrix)
+
+# Plot heatmap using ggplot2
+ggplot(data = melted_cor_matrix, aes(x = Var1, y = Var2, fill = value)) +
+  geom_tile(color = "white") +
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
+                       midpoint = 0, limit = c(-1, 1), space = "Lab", 
+                       name="Correlation") +
+  theme_minimal() + 
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
+  labs(title = "Heatmap of Feature Correlations in Expanded Model",
+       x=NULL,
+       y=NULL)
+```
+
+The correlation matrix shows that many of the demographic and health-related features, particularly `Median.Household.Income`, `Percent.Poverty`, `Adult.Smoking.Percentage` are strongly correlated. Additionally, the two air quality indicators, $\text{O}_3$ and $\text{PM}_{2.5}$ are strongly correlated with each other, but weakly correlated with the other features.
+
+\newpage
+
+\subsection{Appendix E: Chronic Respiratory Disease Demographic Model Summary}
+
+The following model predicts the 2014 mortality rate due to chronic respiratory diseases. First, a model containing several demographic, health, and air quality figures is constructed. Then, backward elimination using BIC is performed to remove predictors that are weak or whose effect on the mortality rate is also explained by other predictors. The resulting model's summary is given below:
 
 ```{r, echo=FALSE}
 resp_model <- lm(Mortality.Rate..2014. ~ O3.8.hr..ppm. + PM2.5.Wtd.AM..mu.g.m3. +
@@ -243,9 +324,19 @@ final_model <- step(resp_model, direction = "backward", trace=0, k=log(n))
 summary(final_model)
 ```
 
+The diagnostic plots suggest that the linearity assumptions hold, and that there are no significant outliers or heavy tails affecting the model. Due to this, there are no issues with goodness-of-fit in the model.
+
+```{r, echo=FALSE}
+par(mfrow=c(2,2))
+plot(resp_model)
+par(mfrow=c(1,1))
+```
+
 \newpage
 
-\subsection{Appendix E: CVD Demographic Model Summary}
+\subsection{Appendix F: CVD Demographic Model Summary}
+
+The following model predicts the 2014 mortality rate due to CVD. First, a model containing several demographic, health, and air quality figures is constructed. Then, backward elimination using BIC is performed to remove predictors that are weak or whose effect on the mortality rate is also explained by other predictors. The resulting model's summary is given below:
 
 ```{r, echo=FALSE}
 cvd_model <- lm(Mortality.Rate..2014. ~ O3.8.hr..ppm. + PM2.5.Wtd.AM..mu.g.m3. +
@@ -257,7 +348,13 @@ final_model <- step(cvd_model, direction = "backward", trace=0, k=log(n))
 summary(final_model)
 ```
 
+The diagnostic plots suggest that the linearity assumptions hold, and that there are no significant outliers or heavy tails affecting the model. Due to this, there are no issues with goodness-of-fit in the model.
 
+```{r, echo=FALSE}
+par(mfrow=c(2,2))
+plot(cvd_model)
+par(mfrow=c(1,1))
+```
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
